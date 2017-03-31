@@ -292,7 +292,7 @@ file=    use given config file
 		git_do config $gitflow_config_option gitflow.branch.stage "$stage_branch"
 	fi
 	
-	if 1 == 1 || ! flag force; then
+	if flag force; then
 		echo
 		echo "Should feature branches throw warnings if they have not been commited to \"stage\"?"
 	fi
