@@ -72,7 +72,7 @@ system!  use system config file
 file=    use given config file
 "
 	local gitflow_config_option should_check_existence branchcount guess
-	local master_branch develop_branch default_suggestion answer prefix
+	local master_branch develop_branch stage_branch default_suggestion answer prefix
 
 	# Define flags
 	DEFINE_boolean 'force' false 'force setting of gitflow branches, even if already configured' f
@@ -236,6 +236,76 @@ file=    use given config file
 		# Store the name of the develop branch
 		git_do config $gitflow_config_option gitflow.branch.develop "$develop_branch"
 	fi
+	
+	# Add a stage branch if no such branch exists yet
+	if gitflow_has_stage_configured && ! flag force; then
+		stage_branch=$(git config --get gitflow.branch.stage)
+	else
+		# Again, the same two cases as with the master selection are
+		# considered (fresh repo or repo that contains branches)
+		branch_count=$(git_local_branches | grep -v "^${stage_branch}\$" | wc -l)
+		if [ "$branch_count" -eq 0 ]; then
+			should_check_existence=NO
+			default_suggestion=$(git config --get gitflow.branch.stage || echo stage)
+		else
+			echo
+			echo "Which branch should be used for integration of \"stage\"?"
+			git_local_branches | grep -v "^${stage_branch}\$" | sed 's/^.*$/   - &/g'
+
+			should_check_existence=YES
+			default_suggestion=
+			for guess in $(git config --get gitflow.branch.stage) 'stage'; do
+				if git_local_branch_exists "$guess" && [ "$guess" != "$master_branch" ]; then
+					default_suggestion="$guess"
+					break
+				fi
+			done
+		fi
+
+		if [ -z $default_suggestion ] && flag defaults; then
+			should_check_existence=YES
+			default_suggestion=$(git config --get gitflow.branch.stage || echo stage)
+		fi
+		
+		printf "Branch name for \"stage\": [$default_suggestion] "
+		if noflag defaults; then
+			read answer
+		else
+			printf "\n"
+		fi
+		stage_branch=${answer:-$default_suggestion}
+		
+		if [ "$master_branch" = "$stage_branch" ]; then
+			die "Production and stage branches should differ."
+		fi
+		
+		if [ "$develop_branch" = "$stage_branch" ]; then
+			die "Integration and stage branches should differ."
+		fi
+		
+		# Check existence in case of an already existing repo
+		if [ "$should_check_existence" = "YES" ]; then
+			git_local_branch_exists "$stage_branch" || die "Local branch '$stage_branch' does not exist."
+		fi
+		
+		# Store the name of the stage branch
+		git_do config $gitflow_config_option gitflow.branch.stage "$stage_branch"
+	fi
+	
+	if flag force; then
+		git_do config $gitflow_config_option gitflow.stage.featurewarnings true
+	else
+		while true; do
+			echo
+			read -p "Should feature branches throw warnings if they have not been commited to \"stage\"? y/n: " yn
+			
+			case $yn in
+				[Yy] ) git_do config $gitflow_config_option gitflow.stage.featurewarnings true ; break;;
+				[Nn] ) git_do config $gitflow_config_option gitflow.stage.featurewarnings false ; break;;
+				* ) echo "Please answer yes or no.";;
+			esac
+		done
+	fi
 
 	# Creation of HEAD
 	# ----------------
@@ -267,6 +337,16 @@ file=    use given config file
 			git_do branch --no-track "$develop_branch" "$master_branch"
 		fi
 		created_gitflow_branch=1
+	fi
+	
+	# Creation of stage
+	# -------------------
+	if ! git_local_branch_exists "$stage_branch"; then
+		if git_remote_branch_exists "origin/$stage_branch"; then
+			git_do branch "$stage_branch" "origin/$stage_branch" >/dev/null 2>&1
+		else
+			git_do branch --no-track "$stage_branch" "$develop_branch"
+		fi
 	fi
 
 	# Assert the git-flow repo has been correctly initialized

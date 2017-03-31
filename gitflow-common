@@ -288,9 +288,17 @@ gitflow_has_develop_configured() {
 	[ "$develop" != "" ] && git_local_branch_exists "$develop"
 }
 
+gitflow_has_stage_configured() {
+	local stage
+
+	stage=$(git config --get gitflow.branch.stage)
+	[ "$stage" != "" ] && git_local_branch_exists "$stage"
+}
+
 gitflow_is_initialized() {
 	gitflow_has_master_configured                    && \
 	gitflow_has_develop_configured                   && \
+	gitflow_has_stage_configured                   	 && \
 	[ "$(git config --get gitflow.branch.master)" != "$(git config --get gitflow.branch.develop)" ] && \
 	$(git config --get-regexp gitflow.prefix >/dev/null 2>&1)
 }
@@ -303,6 +311,7 @@ gitflow_load_settings() {
 	export HOOKS_DIR="$(git config --get gitflow.path.hooks || echo ${DOT_GIT_DIR}/hooks)" # the second option is used to support previous versions of git-flow
 	export MASTER_BRANCH=$(git config --get gitflow.branch.master)
 	export DEVELOP_BRANCH=$(git config --get gitflow.branch.develop)
+	export STAGE_BRANCH=$(git config --get gitflow.branch.stage)
 	export ORIGIN=$(git config --get gitflow.origin || echo origin)
 
 	GITFLOW_CONFIG="$DOT_GIT_DIR/gitflow_config"
