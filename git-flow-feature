@@ -871,8 +871,6 @@ no-ff!                 Never fast-forward during the merge
 	BASE_BRANCH=$(gitflow_config_get_base_branch $BRANCH)
 	BASE_BRANCH=${BASE_BRANCH:-$STAGE_BRANCH}
 	
-	echo "Base branch: $BASE_BRANCH"
-	
 	git_local_branch_exists "$BASE_BRANCH" || die "The base '$BASE_BRANCH' doesn't exists locally or is not a branch. Can't finish the feature branch '$BRANCH'."
 
 	# Detect if we're restoring from a merge conflict
@@ -972,6 +970,7 @@ no-ff!                 Never fast-forward during the merge
 	fi
 	
 	if flag push; then
+		echo "Push latest commits to the '$BASE_BRANCH' branch"
 		git_do push "$ORIGIN" "$BASE_BRANCH" || die "Could not push branch '$BASE_BRANCH' to remote '$ORIGIN'."
 	fi
 	
