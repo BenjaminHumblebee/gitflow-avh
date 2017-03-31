@@ -1,4 +1,4 @@
-# git-flow (AVH Edition)
+# git-flow (AVH Edition) with Staging support
 
 A collection of Git extensions to provide high-level repository operations
 for Vincent Driessen's [branching model](http://nvie.com/git-model "original
