@@ -868,7 +868,7 @@ no-ff!                 Never fast-forward during the merge
 	# Sanity checks
 	require_branch "$BRANCH"
 	
-	BASE_BRANCH=$(gitflow_config_get_base_branch $BRANCH)
+	BASE_BRANCH=$(gitflow_config_get_stage_branch $BRANCH)
 	BASE_BRANCH=${BASE_BRANCH:-$STAGE_BRANCH}
 	
 	git_local_branch_exists "$BASE_BRANCH" || die "The base '$BASE_BRANCH' doesn't exists locally or is not a branch. Can't finish the feature branch '$BRANCH'."
