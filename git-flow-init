@@ -291,6 +291,11 @@ file=    use given config file
 		# Store the name of the stage branch
 		git_do config $gitflow_config_option gitflow.branch.stage "$stage_branch"
 	fi
+	
+	if ! flag force; then
+		echo
+		echo "Should feature branches throw warnings if they have not been commited to \"stage\"?"
+	fi
 
 	# Creation of HEAD
 	# ----------------
