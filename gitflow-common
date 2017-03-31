@@ -425,6 +425,13 @@ gitflow_config_get_base_branch() {
 	echo $(git config --local --get "gitflow.branch.$branch.base")
 }
 
+gitflow_config_get_stage_branch() {
+	local branch
+
+	branch=$1
+	echo $(git config --local --get "gitflow.branch.stage")
+}
+
 #
 # Remove the section that contains the base of a branch as set by gitflow_set_branch
 #
