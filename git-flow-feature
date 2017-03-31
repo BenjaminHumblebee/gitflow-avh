@@ -832,18 +832,6 @@ r,[no]remote     Delete remote branch
 
 cmd_stage() {
 	OPTIONS_SPEC="\
-git flow feature stage [-h] [-f] <name>
-
-Delete a given feature branch
---
-h,help!          Show this help
-showcommands!    Show git commands while executing them
-f,[no]force      Force stage
-"
-}
-
-cmd_stage() {
-	OPTIONS_SPEC="\
 git flow feature stage [-h] [-F] [-p] [--no-ff] [--push] <name|nameprefix>
 
 Stage feature <name>
@@ -882,7 +870,10 @@ no-ff!                 Never fast-forward during the merge
 	
 	BASE_BRANCH=$(gitflow_config_get_base_branch $BRANCH)
 	BASE_BRANCH=${BASE_BRANCH:-$STAGE_BRANCH}
-	git_local_branch_exists "$BASE_BRANCH" || die "The base '$BASE_BRANCH' doesn't exists locally or is not a branch. Can't stage the feature branch '$BRANCH'."
+	
+	echo "Base branch: $BASE_BRANCH"
+	
+	git_local_branch_exists "$BASE_BRANCH" || die "The base '$BASE_BRANCH' doesn't exists locally or is not a branch. Can't finish the feature branch '$BRANCH'."
 
 	# Detect if we're restoring from a merge conflict
 	if [ -f "$DOT_GIT_DIR/.gitflow/MERGE_BASE" ]; then
@@ -968,7 +959,7 @@ no-ff!                 Never fast-forward during the merge
 		# Write the given $STAGE_BRANCH to a temporary file as we will
 		# be needing it later.
 		mkdir -p "$DOT_GIT_DIR/.gitflow"
-		echo "$STAGE_BRANCH" > "$DOT_GIT_DIR/.gitflow/MERGE_STAGE"
+		echo "$STAGE_BRANCH" > "$DOT_GIT_DIR/.gitflow/MERGE_BASE"
 		echo
 		echo "There were merge conflicts. To resolve the merge conflict manually, use:"
 		echo "    git mergetool"
