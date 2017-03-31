@@ -111,6 +111,9 @@ file=     Use given config file
 	output=$(git config $gitflow_config_option --get gitflow.branch.develop)
 	echo "Branch name for \"next release\" development: $output "
 
+	output=$(git config $gitflow_config_option --get gitflow.branch.stage)
+	echo "Branch name for \"stage\": $output "
+
 	output=$(git config $gitflow_config_option --get gitflow.prefix.feature)
 	echo "Feature branch prefix: $output "
 
@@ -163,6 +166,10 @@ file=     Use given config file
 	develop)
 		cfg_option="gitflow.branch.develop"
 		txt="Branch name for \"next release\" development"
+		;;
+	stage)
+		cfg_option="gitflow.branch.stage"
+		txt="Branch name for \"stage\""
 		;;
 	feature)
 		cfg_option="gitflow.prefix.feature"
