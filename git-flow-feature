@@ -844,7 +844,7 @@ f,[no]force      Force stage
 
 cmd_stage() {
 	OPTIONS_SPEC="\
-git flow feature stage [-h] [-F] [-p] [--no-ff] <name|nameprefix>
+git flow feature stage [-h] [-F] [-p] [--no-ff] [--push] <name|nameprefix>
 
 Stage feature <name>
 --
