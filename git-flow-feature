@@ -832,18 +832,6 @@ r,[no]remote     Delete remote branch
 
 cmd_stage() {
 	OPTIONS_SPEC="\
-git flow feature stage [-h] [-f] <name>
-
-Delete a given feature branch
---
-h,help!          Show this help
-showcommands!    Show git commands while executing them
-f,[no]force      Force stage
-"
-}
-
-cmd_stage() {
-	OPTIONS_SPEC="\
 git flow feature stage [-h] [-F] [-p] [--no-ff] [--push] <name|nameprefix>
 
 Stage feature <name>
