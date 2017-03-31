@@ -293,8 +293,18 @@ file=    use given config file
 	fi
 	
 	if flag force; then
-		echo
-		echo "Should feature branches throw warnings if they have not been commited to \"stage\"?"
+		echo "Not implemented yet"
+	else
+		while true; do
+			echo
+			read -p "Should feature branches throw warnings if they have not been commited to \"stage\"? y/n: " yn
+			
+			case $yn in
+				[Yy] ) git_do config $gitflow_config_option gitflow.stage.featurewarnings true ; break;;
+				[Nn] ) git_do config $gitflow_config_option gitflow.stage.featurewarnings false ; break;;
+				* ) echo "Please answer yes or no.";;
+			esac
+		done
 	fi
 
 	# Creation of HEAD

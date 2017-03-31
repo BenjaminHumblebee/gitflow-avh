@@ -56,6 +56,7 @@ git flow feature rebase
 git flow feature checkout
 git flow feature pull
 git flow feature delete
+git flow feature stage
 
 Manage your feature branches.
 
@@ -825,6 +826,178 @@ r,[no]remote     Delete remote branch
 	echo "Summary of actions:"
 	echo "- Feature branch '$BRANCH' has been deleted."
 	flag remote && echo "- Feature branch '$BRANCH' in '$ORIGIN' has been deleted."
+	echo "- You are now on branch '$(git_current_branch)'"
+	echo
+}
+
+cmd_stage() {
+	OPTIONS_SPEC="\
+git flow feature stage [-h] [-f] <name>
+
+Delete a given feature branch
+--
+h,help!          Show this help
+showcommands!    Show git commands while executing them
+f,[no]force      Force stage
+"
+}
+
+cmd_stage() {
+	OPTIONS_SPEC="\
+git flow feature stage [-h] [-F] [-p] [--no-ff] <name|nameprefix>
+
+Stage feature <name>
+--
+h,help!                Show this help
+showcommands!          Show git commands while executing them
+F,[no]fetch            Fetch from origin before performing stage
+p,[no]preserve-merges  Preserve merges while rebasing
+[no]push               Push to origin after performing finish
+no-ff!                 Never fast-forward during the merge
+"
+
+	local stage_base
+	
+	# Define flags
+	DEFINE_boolean 'fetch' false "fetch from $ORIGIN before performing finish" F
+	DEFINE_boolean 'preserve-merges' false 'try to recreate merges while rebasing' p
+	DEFINE_boolean 'push' false "push to $ORIGIN after performing finish"
+	DEFINE_boolean 'no-ff!' false "Don't fast-forward ever during merge "
+	
+	gitflow_override_flag_boolean   "feature.stage.fetch"             "fetch"
+	gitflow_override_flag_boolean   "feature.stage.preserve-merges"   "preserve_merges"
+	gitflow_override_flag_boolean   "feature.stage.push"              "push"
+	gitflow_override_flag_boolean   "feature.stage.no-ff"             "no_ff"
+	
+	# Parse arguments
+	parse_args "$@"
+	
+	# Use current branch if no name is given
+	if [ "$NAME" = "" ]; then
+		gitflow_use_current_branch_name
+	fi
+	
+	# Sanity checks
+	require_branch "$BRANCH"
+	
+	BASE_BRANCH=$(gitflow_config_get_base_branch $BRANCH)
+	BASE_BRANCH=${BASE_BRANCH:-$STAGE_BRANCH}
+	git_local_branch_exists "$BASE_BRANCH" || die "The base '$BASE_BRANCH' doesn't exists locally or is not a branch. Can't stage the feature branch '$BRANCH'."
+
+	# Detect if we're restoring from a merge conflict
+	if [ -f "$DOT_GIT_DIR/.gitflow/MERGE_BASE" ]; then
+		#
+		# TODO: detect that we're working on the correct branch here!
+		# The user need not necessarily have given the same $NAME twice here
+		# (although he/she should).
+		#
+
+		# TODO: git_is_clean_working_tree() should provide an alternative
+		# exit code for "unmerged changes in working tree", which we should
+		# actually be testing for here
+		if git_is_clean_working_tree; then
+			finish_base=$(cat "$DOT_GIT_DIR/.gitflow/MERGE_BASE")
+
+			# Since the working tree is now clean, either the user did a
+			# successful merge manually, or the merge was cancelled.
+			# We detect this using git_is_branch_merged_into()
+			if git_is_branch_merged_into "$BRANCH" "$finish_base"; then
+				rm -f "$DOT_GIT_DIR/.gitflow/MERGE_BASE"
+				helper_finish_cleanup
+				exit 0
+			else
+				# If the user cancelled the merge and decided to wait until
+				# later,that's fine. But we have to acknowledge this by
+				# removing the MERGE_BASE file and continuing normal execution
+				# of the finish
+				rm -f "$DOT_GIT_DIR/.gitflow/MERGE_BASE"
+			fi
+		else
+			echo
+			echo "Merge conflicts not resolved yet, use:"
+			echo "    git mergetool"
+			echo "    git commit"
+			echo
+			echo "You can then complete the finish by running it again:"
+			echo "    git flow feature finish $NAME"
+			echo
+			exit 1
+		fi
+	fi
+
+	# Sanity checks
+	require_clean_working_tree
+
+	# We always fetch the Branch from Origin
+	# This is done to avoid possible commits on the remote that are not
+	# merged into the local branch
+	if git_remote_branch_exists "$ORIGIN/$BRANCH"; then
+		git_fetch_branch "$ORIGIN" "$BRANCH"
+	fi
+
+	# Update local branches with remote branches
+	if flag fetch; then
+		git_fetch_branch "$ORIGIN" "$BASE_BRANCH"
+	fi
+
+	# Check if the local branches have all the commits from the remote branches
+	if git_remote_branch_exists "$ORIGIN/$BRANCH"; then
+			require_branches_equal "$BRANCH" "$ORIGIN/$BRANCH"
+	fi
+	if git_remote_branch_exists "$ORIGIN/$BASE_BRANCH"; then
+		require_branches_equal "$BASE_BRANCH" "$ORIGIN/$BASE_BRANCH"
+	fi
+	
+	run_pre_hook "$NAME" "$ORIGIN" "$BRANCH"
+	
+	# Merge into stage
+	git_do checkout "$STAGE_BRANCH" || die "Could not check out branch '$STAGE_BRANCH'."
+	
+	if flag no_ff; then
+		git_do merge --no-ff "$BRANCH"
+	else
+		if [ "$(git rev-list -n2 "$STAGE_BRANCH..$BRANCH" | wc -l)" -eq 1 ]; then
+			git_do merge --ff "$BRANCH"
+		else
+			git_do merge --no-ff "$BRANCH"
+		fi
+	fi
+	
+	if [ $? -ne 0 ]; then
+		# Oops.. we have a merge conflict!
+		# Write the given $STAGE_BRANCH to a temporary file as we will
+		# be needing it later.
+		mkdir -p "$DOT_GIT_DIR/.gitflow"
+		echo "$STAGE_BRANCH" > "$DOT_GIT_DIR/.gitflow/MERGE_STAGE"
+		echo
+		echo "There were merge conflicts. To resolve the merge conflict manually, use:"
+		echo "    git mergetool"
+		echo "    git commit"
+		echo
+		echo "You can then complete the stage by running it again:"
+		echo "    git flow feature stage $NAME"
+		echo
+		exit 1
+	fi
+	
+	if flag push; then
+		git_do push "$ORIGIN" "$BASE_BRANCH" || die "Could not push branch '$BASE_BRANCH' to remote '$ORIGIN'."
+	fi
+	
+	git_do checkout "$BRANCH"
+	
+	echo
+	echo "Summary of actions:"
+	echo "- The feature branch '$BRANCH' was merged into '$STAGE_BRANCH'"
+	
+	local keepmsg
+	
+	keepmsg="is still locally available"
+	if git_remote_branch_exists "$ORIGIN/$BRANCH"; then
+		keepmsg=$keepmsg"; it is still remotely available on '$ORIGIN'"
+	fi
+	
+	echo "- Feature branch '$BRANCH' "$keepmsg
 	echo "- You are now on branch '$(git_current_branch)'"
 	echo
 }
