@@ -293,7 +293,7 @@ file=    use given config file
 	fi
 	
 	if flag force; then
-		echo "Not implemented yet"
+		git_do config $gitflow_config_option gitflow.stage.featurewarnings true
 	else
 		while true; do
 			echo
